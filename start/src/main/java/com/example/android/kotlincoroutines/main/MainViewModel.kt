@@ -22,6 +22,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.android.kotlincoroutines.util.BACKGROUND
 import com.example.android.kotlincoroutines.util.singleArgViewModelFactory
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -104,7 +105,6 @@ class MainViewModel(private val repository: TitleRepository) : ViewModel() {
      * Wait one second then update the tap count.
      */
     private fun updateTaps() {
-        // TODO: Convert updateTaps to use coroutines
         viewModelScope.launch {
             tapCount++
             delay(1_000)
@@ -123,10 +123,16 @@ class MainViewModel(private val repository: TitleRepository) : ViewModel() {
      * Refresh the title, showing a loading spinner while it refreshes and errors via snackbar.
      */
     private fun refreshTitle() {
-        viewModelScope.launch {
+        launchDataLoad {
+            repository.refreshTitle()
+        }
+    }
+
+    private fun launchDataLoad(block: suspend () -> Unit): Job {
+        return viewModelScope.launch {
             try {
                 _spinner.value = true
-                repository.refreshTitle()
+                block()
             } catch (error: TitleRefreshError) {
                 _snackBar.value = error.message
             } finally {
